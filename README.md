@@ -37,12 +37,15 @@ Randomness: secrets module (CSPRNG - Cryptographically Secure Pseudo-Random Numb
 UI Helpers: pyperclip for secure clipboard handling
 
 ##Installation & Usage
+
 Install dependencies:
 
 Bash
 pip install cryptography pyperclip
+
 Run the application:
 
 Bash
 python password.py
-Initialization: On the first run, the system will prompt you to create a Master Password. Note: Due to the Zero-Knowledge nature of this app, there is no "Forgot Password" feature.
+Initialization: On the first run, the system will prompt you to create a Master Password. 
+Note: Due to the Zero-Knowledge nature of this app, there is no "Forgot Password" feature.
