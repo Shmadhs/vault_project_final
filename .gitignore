@@ -1,3 +1,11 @@
+# Database
 vault.db
+
+# PyInstaller folders and files
+dist/
+build/
+*.spec
+
+# Python cache
 __pycache__/
 *.pyc
