@@ -21,12 +21,18 @@ def get_vault_salt():
 
 def setup_vault():
     print("--- FIRST TIME SETUP ---")
+    
+    suggested_pass = generate_powerful_password(20)
+    print("\n[*] Suggested Strong Master Password:")
+    print(f"    -->  {suggested_pass}  <--")
+    print("    (You can copy-paste this, or type your own. Save it somewhere safe!)\n")
+    
     while True:
         p1 = input("Set Master Password: ")
         p2 = input("Confirm Master Password: ")
-        if p1 == p2:
+        if p1 == p2 and p1 != "":
             break
-        print("Passwords do not match")
+        print("[!] Passwords do not match or cannot be empty. Try again.\n")
     
     salt = os.urandom(32)
     key, _ = derive_key_super_secure(p1, salt)
@@ -38,6 +44,8 @@ def setup_vault():
     cursor.execute("INSERT INTO passwords (site_name, username, encrypted_bundle) VALUES (?, ?, ?)", ("_canary", "system", canary))
     conn.commit()
     conn.close()
+    
+    print("\n[+] Vault initialized successfully!")
     return p1
 
 def verify_vault(master_password):
@@ -91,6 +99,8 @@ def list_entries():
     cursor.execute("SELECT site_name FROM passwords WHERE site_name != '_canary' ORDER BY site_name ASC")
     rows = cursor.fetchall()
     conn.close()
+    if not rows:
+        print("Vault is empty.")
     for row in rows:
         print(f"- {row[0]}")
 
@@ -121,8 +131,10 @@ def change_master_password(old_password):
     cursor = conn.cursor()
     cursor.execute('SELECT site_name, username, encrypted_bundle FROM passwords')
     rows = cursor.fetchall()
+    
     old_salt = get_vault_salt()
     old_key, _ = derive_key_super_secure(old_password, old_salt)
+    
     decrypted_entries = []
     try:
         for site, user, bundle in rows:
@@ -131,38 +143,47 @@ def change_master_password(old_password):
             else:
                 decrypted_entries.append((site, user, decrypt_password(old_key, bundle)))
     except InvalidTag:
-        print("Error")
+        print("Error: Could not decrypt data with old password.")
         return old_password
+
+    print("\n--- CHANGE MASTER PASSWORD ---")
     new_p1 = input("New Master Password: ")
-    new_p2 = input("Confirm: ")
+    new_p2 = input("Confirm New Password: ")
+    
     if new_p1 != new_p2:
+        print("Passwords do not match. Aborting.")
         return old_password
+        
     new_salt = os.urandom(32)
     new_key, _ = derive_key_super_secure(new_p1, new_salt)
+    
     cursor.execute('DELETE FROM passwords')
     for site, user, plain in decrypted_entries:
         new_bundle = encrypt_password(new_key, plain)
         cursor.execute('INSERT INTO passwords (site_name, username, encrypted_bundle) VALUES (?, ?, ?)', (site, user, new_bundle))
+    
     cursor.execute('UPDATE master_data SET salt = ? WHERE id = 1', (new_salt,))
     conn.commit()
     cursor.execute('VACUUM')
     conn.close()
-    print("Changed")
+    print("Master Password changed successfully and all data re-encrypted.")
     return new_p1
 
 def main_menu():
     init_db()
     print("""
     ***************************
-    * SECURE VAULT v1.0     *
+    * SECURE VAULT v1.0    *
     ***************************
     """)
+    
     if not get_vault_salt():
         current_master = setup_vault()
     else:
         while True:
             current_master = input("Master Password: ")
             if verify_vault(current_master):
+                print("Access Granted.")
                 break
             print("Access Denied")
 
@@ -171,8 +192,9 @@ def main_menu():
         c = input("> ")
         if c == '1':
             site, user = input("Site: "), input("User: ")
-            pwd = generate_powerful_password() if input("Gen? (y/n): ").lower() == 'y' else input("Pass: ")
-            if len(pwd) > 20: print(f"Generated: {pwd}")
+            gen_choice = input("Generate random password? (y/n): ").lower()
+            pwd = generate_powerful_password() if gen_choice == 'y' else input("Pass: ")
+            if gen_choice == 'y': print(f"Generated: {pwd}")
             add_entry(current_master, site, user, pwd)
         elif c == '2':
             get_entry(current_master, input("Site: "))
@@ -185,6 +207,7 @@ def main_menu():
         elif c == '6':
             current_master = change_master_password(current_master)
         elif c == '7':
+            print("Goodbye!")
             break
 
 if __name__ == "__main__":
