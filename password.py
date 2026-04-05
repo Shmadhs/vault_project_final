@@ -1,3 +1,4 @@
+import threading
 import sqlite3
 import os
 import secrets
@@ -75,21 +76,35 @@ def add_entry(master_password, site_name, username, site_password):
     print(f"SUCCESS: {site_name} saved")
 
 def get_entry(master_password, site_name):
+    
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('SELECT username, encrypted_bundle FROM passwords WHERE site_name = ?', (site_name,))
     result = cursor.fetchone()
     conn.close()
+    
     if not result or site_name == "_canary":
         print("Not Found")
         return
+        
     user, bundle = result
     salt = get_vault_salt()
     key, _ = derive_key_super_secure(master_password, salt)
+    
     try:
         plain = decrypt_password(key, bundle)
         pyperclip.copy(plain)
-        print(f"Username: {user}\nPassword: {plain}\nCopied to clipboard")
+        print(f"Username: {user}\nPassword: {plain}")
+        print("[!] Copied to clipboard. Will auto-clear in 15 seconds...")
+        
+        
+        def clear_clipboard():
+            pyperclip.copy('')
+            print("\n[*] Security Event: Clipboard wiped automatically.")
+            
+        threading.Timer(10.0, clear_clipboard).start()
+        
+        
     except InvalidTag:
         print("Decryption Failed")
 

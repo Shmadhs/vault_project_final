@@ -6,7 +6,7 @@ def derive_key_super_secure(master_password: str, salt: bytes = None):
     if salt is None:
         salt = os.urandom(32) 
     
-    pepper = b"MySecretPepper_NeverStoreThisInTheDatabase!" 
+    pepper = b"MySecret!" 
     password_bytes = master_password.encode('utf-8') + pepper
     
     kdf = Argon2id(
@@ -14,7 +14,7 @@ def derive_key_super_secure(master_password: str, salt: bytes = None):
         length=32,
         iterations=3,
         lanes=4,
-        memory_cost=65536,
+        memory_cost=1048576,
     )
     
     key = kdf.derive(password_bytes)
@@ -39,10 +39,10 @@ def decrypt_password(key: bytes, encrypted_bundle: bytes) -> str:
     return plaintext_bytes.decode('utf-8')
 
 if __name__ == "__main__":
-    master_password = "NothingHereLOSER"
+    master_password = "MySuperSecret!"
     my_key, my_salt = derive_key_super_secure(master_password)
     
-    my_bank_password = "WhatAreYouLoookingFor?Boy"
+    my_bank_password = "kmlfvewkmlvfekmlwdklqwd!"
     encrypted_data = encrypt_password(my_key, my_bank_password)
     decrypted_password = decrypt_password(my_key, encrypted_data)
     
